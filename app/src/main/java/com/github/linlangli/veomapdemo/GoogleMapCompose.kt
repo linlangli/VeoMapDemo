@@ -87,7 +87,6 @@ fun GoogleMapScreen() {
                 startMarkerInfo = createTextMarkerIcon(context, it.title)
             }
         } ?: run {
-            Log.i("GoogleMapScreen", "使用默认位置")
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(defaultLocation, 12f))
         }
     }
@@ -99,7 +98,7 @@ fun GoogleMapScreen() {
             routePoints.forEach { builder.include(it) }
             val bounds = builder.build()
             cameraPositionState.animate(
-                CameraUpdateFactory.newLatLngBounds(bounds, 100) // 100 是边距
+                CameraUpdateFactory.newLatLngBounds(bounds, 100)
             )
         // 开始导航聚焦当前位置
         } else if (navigationState == NavigationState.STARTED) {
@@ -193,19 +192,23 @@ fun GoogleMapScreen() {
         }
         Button(
             onClick = {
-                if (navigationState == NavigationState.STARTED) {
-                    viewModel.stopNavigation()
-                } else if (navigationState == NavigationState.ARRIVED) {
-                    viewModel.stopNavigation()
-                } else {
-                    val origin = startLocation ?: LocationInfo(defaultLocation, "默认位置")
-                    val dest = endLocation ?: return@Button
-                    viewModel.fetchDirections(
-                        origin = "${origin.latLng.latitude},${origin.latLng.longitude}",
-                        destination = "${dest.latLng.latitude},${dest.latLng.longitude}",
-                        apiKey = BuildConfig.MAPS_API_KEY
-                    )
-                    viewModel.startNavigation()
+                when (navigationState) {
+                    NavigationState.STARTED -> {
+                        viewModel.stopNavigation()
+                    }
+                    NavigationState.ARRIVED -> {
+                        viewModel.stopNavigation()
+                    }
+                    else -> {
+                        val origin = startLocation ?: LocationInfo(defaultLocation, "默认位置")
+                        val dest = endLocation ?: return@Button
+                        viewModel.fetchDirections(
+                            origin = "${origin.latLng.latitude},${origin.latLng.longitude}",
+                            destination = "${dest.latLng.latitude},${dest.latLng.longitude}",
+                            apiKey = BuildConfig.MAPS_API_KEY
+                        )
+                        viewModel.startNavigation()
+                    }
                 }
             },
             enabled = endLocation != null,

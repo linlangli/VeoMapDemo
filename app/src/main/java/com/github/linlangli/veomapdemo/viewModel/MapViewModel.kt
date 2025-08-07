@@ -93,7 +93,7 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         }
     }
 
-    @SuppressLint("MissingPermission") // 前提是权限已检查
+    @SuppressLint("MissingPermission")
     fun startLocationUpdates() {
         fusedLocationClient.requestLocationUpdates(
             locationRequest,
@@ -106,7 +106,7 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
-    @SuppressLint("MissingPermission") // 前提是权限已检查
+    @SuppressLint("MissingPermission")
     fun initStartLocation() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             location?.let {
@@ -124,12 +124,8 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         }
     }
 
-    /**
-     * 获取两点之间的行车路线
-     * @param origin 起点坐标，格式为 "lat,lng"
-     * @param destination 终点坐标，格式为 "lat,lng"
-     * @param apiKey Google Maps API Key
-     */
+
+    // 获取两点之间的行车路线
     fun fetchDirections(origin: String, destination: String, apiKey: String) {
         viewModelScope.launch {
             try {
@@ -141,16 +137,6 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
                 _directionLeg.value = response.routes[0].legs[0]
                 if (response.routes.isNotEmpty()) {
                     val polyline = response.routes[0].overviewPolyline.points
-//                    if (_directionLeg.value != null) {
-//                        _startLocation.value = LocationInfo(
-//                            LatLng(_directionLeg.value!!.start_location.lat, _directionLeg.value!!.start_location.lng),
-//                            response.routes[0].legs[0].start_address
-//                        )
-//                        _endLocation.value = LocationInfo(
-//                            LatLng(_directionLeg.value!!.end_location.lat, _directionLeg.value!!.end_location.lng),
-//                            _directionLeg.value!!.end_address
-//                        )
-//                    }
                     _routePoints.value = decodePolyline(polyline)
                 }
             } catch (e: Exception) {
