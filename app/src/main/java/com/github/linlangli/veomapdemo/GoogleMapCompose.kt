@@ -31,11 +31,12 @@ fun GoogleMapScreen() {
     val context = LocalContext.current
 
     val routePoints by viewModel.routePoints.collectAsState()
-    val startLocation by viewModel.startLatLng.collectAsState()
+    val startLocation by viewModel.startLocation.collectAsState()
+    val endLocation by viewModel.endLocation.collectAsState()
 
-    var destination by remember { mutableStateOf<LocationInfo?>(null) }
     var hasLocationPermission by remember { mutableStateOf(false) }
-    var customMarkerIcon by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var startMarkerInfo by remember { mutableStateOf<BitmapDescriptor?>(null) }
+    var endMarkerInfo by remember { mutableStateOf<BitmapDescriptor?>(null) }
 
     // 默认北京
     val defaultLocation = LatLng(39.9042, 116.4074)
@@ -74,14 +75,13 @@ fun GoogleMapScreen() {
         startLocation?.let {
             Log.i("GoogleMapScreen", "startLocation: ${it.latLng}, title: ${it.title}")
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it.latLng, 12f))
-            if (customMarkerIcon == null) {
-                customMarkerIcon = createTextMarkerIcon(context, it.title)
+            if (startMarkerInfo == null) {
+                startMarkerInfo = createTextMarkerIcon(context, it.title)
             }
         } ?: run {
             Log.i("GoogleMapScreen", "使用默认位置")
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(defaultLocation, 12f))
         }
-
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -93,16 +93,17 @@ fun GoogleMapScreen() {
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
             onMapClick = { latLng ->
                 Log.i("GoogleMapScreen", "latLng: $latLng")
-                destination = LocationInfo(latLng, "加载中...") // 先占位
                 viewModel.reverseGeocode(latLng, BuildConfig.MAPS_API_KEY) { address ->
-                    destination = LocationInfo(latLng, address ?: "加载中")
-                    customMarkerIcon = createTextMarkerIcon(context, destination?.title ?: "未知位置")
+                    val location = LocationInfo(latLng, address ?: "未知位置")
+                    viewModel.setEndLocation(location)
+                    endMarkerInfo = createTextMarkerIcon(context, location.title)
                 }
                 viewModel.clearRoute()
             },
         ) {
             // 当前定位
             startLocation?.let {
+                Log.i("GoogleMapScreen", "🚗 startLocation: ${it.latLng}, title: ${it.title}")
                 Marker(
                     state = MarkerState(position = it.latLng),
                     title = it.title,
@@ -113,22 +114,30 @@ fun GoogleMapScreen() {
                     title = "默认位置（北京）"
                 )
             }
-            // 用户点击位置
-            destination?.let {
-                Marker(
-                    state = MarkerState(position = it.latLng),
-                )
-            }
-            customMarkerIcon?.let {
-                destination?.let {
+            startMarkerInfo?.let {
+                startLocation?.let {
                     Marker(
                         state = MarkerState(position = it.latLng),
-                        icon = customMarkerIcon,
+                        icon = startMarkerInfo,
                         anchor = Offset(0.5f, 3f) // 图标底部对准坐标
                     )
                 }
             }
-            Log.i("GoogleMapScreen", "routePoints: $routePoints")
+            // 用户点击位置
+            endLocation?.let {
+                Marker(
+                    state = MarkerState(position = it.latLng),
+                )
+            }
+            endMarkerInfo?.let {
+                endLocation?.let {
+                    Marker(
+                        state = MarkerState(position = it.latLng),
+                        icon = endMarkerInfo,
+                        anchor = Offset(0.5f, 3f) // 图标底部对准坐标
+                    )
+                }
+            }
             if (routePoints.isNotEmpty()) {
                 Polyline(
                     points = routePoints,
@@ -141,7 +150,7 @@ fun GoogleMapScreen() {
         Button(
             onClick = {
                 val origin = startLocation ?: LocationInfo(defaultLocation, "默认位置")
-                val dest = destination ?: return@Button
+                val dest = endLocation ?: return@Button
                 viewModel.fetchDirections(
                     origin = "${origin.latLng.latitude},${origin.latLng.longitude}",
                     destination = "${dest.latLng.latitude},${dest.latLng.longitude}",

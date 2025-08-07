@@ -29,11 +29,17 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     private val _routePoints = MutableStateFlow<List<LatLng>>(emptyList())
     val routePoints = _routePoints.asStateFlow()
 
-    private val _currentLatLng = MutableStateFlow<LocationInfo?>(null)
-    val currentLatLng = _currentLatLng.asStateFlow()
+    private val _currentLocation = MutableStateFlow<LocationInfo?>(null)
+    val currentLocation = _currentLocation.asStateFlow()
 
-    private val _startLatLng = MutableStateFlow<LocationInfo?>(null)
-    val startLatLng = _startLatLng.asStateFlow()
+    private val _startLocation = MutableStateFlow<LocationInfo?>(null)
+    val startLocation = _startLocation.asStateFlow()
+
+    private val _endLocation = MutableStateFlow<LocationInfo?>(null)
+    val endLocation = _endLocation.asStateFlow()
+
+    private val _arrived = MutableStateFlow<Boolean?>(null)
+    val arrived = _endLocation.asStateFlow()
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(app)
     private val locationRequest = LocationRequest.Builder(
@@ -47,19 +53,26 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         override fun onLocationResult(result: LocationResult) {
             val location: Location? = result.lastLocation
             location?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
                 reverseGeocode(
-                    LatLng(it.latitude, it.longitude),
+                    latLng,
                     BuildConfig.MAPS_API_KEY
                 ) { address ->
-                    if (_startLatLng.value == null) {
-                        _startLatLng.value = LocationInfo(
-                            LatLng(it.latitude, it.longitude),
+                    if (_startLocation.value == null) {
+                        _startLocation.value = LocationInfo(
+                            latLng,
                             address ?: "未知位置"
                         )
                     }
-                    Log.i("GoogleMapScreen", "??Address: $address")
-                    _currentLatLng.value = LocationInfo(
-                        LatLng(it.latitude, it.longitude),
+                    Log.i("GoogleMapScreen", "🚗 currentLatLng: $address, endAddress: ${_endLocation.value?.title}")
+                    if (hasArrived(latLng, _endLocation.value?.latLng)) {
+                        Log.i("GoogleMapScreen", "🚗 已到达目的地: ${_endLocation.value?.title}")
+                        // 停止导航、提示用户
+                        stopLocationUpdates()
+                        // 你可以弹窗、显示旅程总结等
+                    }
+                    _currentLocation.value = LocationInfo(
+                        latLng,
                         address ?: "未知位置"
                     )
                 }
@@ -98,6 +111,14 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
 
                 if (response.routes.isNotEmpty()) {
                     val polyline = response.routes[0].overviewPolyline.points
+                    _startLocation.value = LocationInfo(
+                        LatLng(response.routes[0].legs[0].start_location.lat, response.routes[0].legs[0].start_location.lng),
+                        response.routes[0].legs[0].start_address
+                    )
+                    _endLocation.value = LocationInfo(
+                        LatLng(response.routes[0].legs[0].end_location.lat, response.routes[0].legs[0].end_location.lng),
+                        response.routes[0].legs[0].end_address
+                    )
                     _routePoints.value = decodePolyline(polyline)
                 }
             } catch (e: Exception) {
@@ -121,6 +142,26 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
                 onResult(null)
             }
         }
+    }
+
+    fun hasArrived(currentLatLng: LatLng, destinationLatLng: LatLng?, thresholdInMeters: Float = 30f): Boolean {
+        if (destinationLatLng == null) {
+            return false
+        }
+        Log.i("GoogleMapScreen", "🚗 currentLatLng: $currentLatLng, destinationLatLng: $destinationLatLng")
+        val result = FloatArray(1)
+        Location.distanceBetween(
+            currentLatLng.latitude,
+            currentLatLng.longitude,
+            destinationLatLng.latitude,
+            destinationLatLng.longitude,
+            result
+        )
+        return result[0] <= thresholdInMeters
+    }
+
+    fun setEndLocation(endLocation: LocationInfo) {
+        _endLocation.value = endLocation
     }
 
     fun clearRoute() {
