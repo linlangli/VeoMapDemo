@@ -25,6 +25,12 @@ data class LocationInfo(
     val title: String = "",
 )
 
+enum class NavigationState {
+    IDLE, // 空闲状态
+    STARTED, // 导航已开始
+    ARRIVED, // 已到达目的地
+}
+
 class MapViewModel(app: Application): AndroidViewModel(app) {
     private val _routePoints = MutableStateFlow<List<LatLng>>(emptyList())
     val routePoints = _routePoints.asStateFlow()
@@ -38,8 +44,8 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     private val _endLocation = MutableStateFlow<LocationInfo?>(null)
     val endLocation = _endLocation.asStateFlow()
 
-    private val _arrived = MutableStateFlow<Boolean?>(null)
-    val arrived = _endLocation.asStateFlow()
+    private val _navigationState = MutableStateFlow(NavigationState.IDLE)
+    val navigationState = _navigationState.asStateFlow()
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(app)
     private val locationRequest = LocationRequest.Builder(
@@ -48,6 +54,7 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     ).apply {
         setMinUpdateIntervalMillis(2000L) // 最快每2秒更新一次
     }.build()
+
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
@@ -58,23 +65,19 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
                     latLng,
                     BuildConfig.MAPS_API_KEY
                 ) { address ->
-                    if (_startLocation.value == null) {
-                        _startLocation.value = LocationInfo(
-                            latLng,
-                            address ?: "未知位置"
-                        )
-                    }
-                    Log.i("GoogleMapScreen", "🚗 currentLatLng: $address, endAddress: ${_endLocation.value?.title}")
-                    if (hasArrived(latLng, _endLocation.value?.latLng)) {
-                        Log.i("GoogleMapScreen", "🚗 已到达目的地: ${_endLocation.value?.title}")
-                        // 停止导航、提示用户
-                        stopLocationUpdates()
-                        // 你可以弹窗、显示旅程总结等
-                    }
+                    _navigationState.value = NavigationState.STARTED
                     _currentLocation.value = LocationInfo(
                         latLng,
                         address ?: "未知位置"
                     )
+                    if (hasArrived(latLng, _endLocation.value?.latLng)) {
+                        Log.i("GoogleMapScreen", "🚗 已到达目的地: ${_endLocation.value?.title}")
+                        // 停止导航、提示用户
+                        _navigationState.value = NavigationState.ARRIVED
+                        stopLocationUpdates()
+                    } else {
+                        Log.i("GoogleMapScreen", "🚗 还未到达目的地: $latLng")
+                    }
                 }
             }
         }
@@ -93,6 +96,25 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
 
+    @SuppressLint("MissingPermission") // 前提是权限已检查
+    fun initStartLocation() {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            location?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
+                Log.i("GoogleMapScreen", "🚗 initStartLocation: $latLng")
+                reverseGeocode(
+                    latLng,
+                    BuildConfig.MAPS_API_KEY
+                ) { address ->
+                    _startLocation.value = LocationInfo(
+                        latLng,
+                        address ?: "未知位置"
+                    )
+                }
+            }
+        }
+    }
+
     /**
      * 获取两点之间的行车路线
      * @param origin 起点坐标，格式为 "lat,lng"
@@ -100,7 +122,7 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
      * @param apiKey Google Maps API Key
      */
     fun fetchDirections(origin: String, destination: String, apiKey: String) {
-        Log.i("GoogleMapScreen", "fetchDirections")
+        Log.i("GoogleMapScreen", "🚗 fetchDirections")
         viewModelScope.launch {
             try {
                 val response = MapUtil.directionService.getDirections(
@@ -148,7 +170,6 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         if (destinationLatLng == null) {
             return false
         }
-        Log.i("GoogleMapScreen", "🚗 currentLatLng: $currentLatLng, destinationLatLng: $destinationLatLng")
         val result = FloatArray(1)
         Location.distanceBetween(
             currentLatLng.latitude,
@@ -158,6 +179,18 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
             result
         )
         return result[0] <= thresholdInMeters
+    }
+
+    fun startNavigation() {
+        _navigationState.value = NavigationState.STARTED
+        startLocationUpdates()
+    }
+
+    fun stopNavigation() {
+        stopLocationUpdates()
+        _navigationState.value = NavigationState.IDLE
+        _endLocation.value = null
+        clearRoute()
     }
 
     fun setEndLocation(endLocation: LocationInfo) {

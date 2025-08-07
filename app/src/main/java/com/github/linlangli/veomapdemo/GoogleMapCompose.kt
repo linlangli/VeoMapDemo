@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
@@ -14,11 +15,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.github.linlangli.veomapdemo.utils.MapUtil.createTextMarkerIcon
 import com.github.linlangli.veomapdemo.viewModel.LocationInfo
 import com.github.linlangli.veomapdemo.viewModel.MapViewModel
+import com.github.linlangli.veomapdemo.viewModel.NavigationState
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.CameraPosition
@@ -33,6 +36,7 @@ fun GoogleMapScreen() {
     val routePoints by viewModel.routePoints.collectAsState()
     val startLocation by viewModel.startLocation.collectAsState()
     val endLocation by viewModel.endLocation.collectAsState()
+    val navigationState by viewModel.navigationState.collectAsState()
 
     var hasLocationPermission by remember { mutableStateOf(false) }
     var startMarkerInfo by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -60,7 +64,8 @@ fun GoogleMapScreen() {
 
         if (fineLocation == PackageManager.PERMISSION_GRANTED || coarseLocation == PackageManager.PERMISSION_GRANTED) {
             hasLocationPermission = true
-            viewModel.startLocationUpdates()
+//            viewModel.startLocationUpdates()
+            viewModel.initStartLocation()
         } else {
             permissionLauncher.launch(
                 arrayOf(
@@ -73,7 +78,6 @@ fun GoogleMapScreen() {
 
     LaunchedEffect(startLocation) {
         startLocation?.let {
-            Log.i("GoogleMapScreen", "startLocation: ${it.latLng}, title: ${it.title}")
             cameraPositionState.animate(CameraUpdateFactory.newLatLngZoom(it.latLng, 12f))
             if (startMarkerInfo == null) {
                 startMarkerInfo = createTextMarkerIcon(context, it.title)
@@ -146,22 +150,43 @@ fun GoogleMapScreen() {
                 )
             }
         }
-
+        // 固定在左上角的总结信息
+        if (navigationState == NavigationState.ARRIVED) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .padding(12.dp)
+                    .zIndex(1f)
+            ) {
+                Text(text = "你好", color = Color.Black)
+            }
+        }
+        var buttonText = "开始导航"
+        Log.i("GoogleMapScreen", "🚗 navigationState: $navigationState")
+        if (navigationState == NavigationState.STARTED) {
+            buttonText = "取消导航"
+        }
         Button(
             onClick = {
-                val origin = startLocation ?: LocationInfo(defaultLocation, "默认位置")
-                val dest = endLocation ?: return@Button
-                viewModel.fetchDirections(
-                    origin = "${origin.latLng.latitude},${origin.latLng.longitude}",
-                    destination = "${dest.latLng.latitude},${dest.latLng.longitude}",
-                    apiKey = BuildConfig.MAPS_API_KEY
-                )
+                if (navigationState == NavigationState.STARTED) {
+                    viewModel.stopNavigation()
+                } else {
+                    val origin = startLocation ?: LocationInfo(defaultLocation, "默认位置")
+                    val dest = endLocation ?: return@Button
+                    viewModel.fetchDirections(
+                        origin = "${origin.latLng.latitude},${origin.latLng.longitude}",
+                        destination = "${dest.latLng.latitude},${dest.latLng.longitude}",
+                        apiKey = BuildConfig.MAPS_API_KEY
+                    )
+                    viewModel.startNavigation()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text("开始导航")
+            Text(buttonText)
         }
     }
 }
