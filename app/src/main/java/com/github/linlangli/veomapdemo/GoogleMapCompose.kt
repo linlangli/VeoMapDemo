@@ -24,20 +24,20 @@ import com.google.maps.android.compose.*
 @Composable
 fun GoogleMapScreen() {
     val viewModel: MapViewModel = viewModel()
+    val context = LocalContext.current
+
     val routePoints by viewModel.routePoints.collectAsState()
 
-    val context = LocalContext.current
     var currentLocation by remember { mutableStateOf<LatLng?>(null) }
     var destination by remember { mutableStateOf<LatLng?>(null) }
+    var destinationTitle by remember { mutableStateOf<String?>(null) }
+    var hasLocationPermission by remember { mutableStateOf(false) }
 
     // 默认北京
     val defaultLocation = LatLng(39.9042, 116.4074)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(defaultLocation, 12f)
     }
-
-    var hasLocationPermission by remember { mutableStateOf(false) }
-
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -79,8 +79,12 @@ fun GoogleMapScreen() {
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
             onMapClick = { latLng ->
-                Log.i("GoogleMapScreen", "Clicked at: $latLng")
+                Log.i("GoogleMapScreen", "latLng: $latLng")
                 destination = latLng
+                viewModel.reverseGeocode(latLng, BuildConfig.MAPS_API_KEY) { address ->
+                    destinationTitle = address ?: "未知位置"
+                    Log.i("GoogleMapScreen", "地址: $address")
+                }
             }
         ) {
             // 当前定位
@@ -99,7 +103,8 @@ fun GoogleMapScreen() {
             destination?.let {
                 Marker(
                     state = MarkerState(position = it),
-                    title = "目的地"
+                    title = destinationTitle ?: "目的地",
+                    snippet = "点击开始导航",
                 )
             }
             if (routePoints.isNotEmpty()) {

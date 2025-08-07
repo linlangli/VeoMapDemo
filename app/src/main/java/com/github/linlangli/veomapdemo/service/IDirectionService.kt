@@ -4,7 +4,7 @@ import com.github.linlangli.veomapdemo.model.DirectionsModel
 import retrofit2.http.GET
 import retrofit2.http.Query
 
-interface IMapService {
+interface IDirectionService {
     @GET("maps/api/directions/json")
     suspend fun getDirections(
         @Query("origin") origin: String,

@@ -1,6 +1,7 @@
 package com.github.linlangli.veomapdemo.utils
 
-import com.github.linlangli.veomapdemo.service.IMapService
+import com.github.linlangli.veomapdemo.service.IDirectionService
+import com.github.linlangli.veomapdemo.service.IGeocodingService
 import com.google.android.gms.maps.model.LatLng
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -46,6 +47,9 @@ object MapUtil {
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    val mapService: IMapService =
-        retrofit.create(IMapService::class.java)
+    val directionService: IDirectionService =
+        retrofit.create(IDirectionService::class.java)
+
+    val geocodingService: IGeocodingService =
+        retrofit.create(IGeocodingService::class.java)
 }

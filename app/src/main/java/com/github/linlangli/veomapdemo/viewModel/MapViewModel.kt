@@ -1,5 +1,6 @@
 package com.github.linlangli.veomapdemo.viewModel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.linlangli.veomapdemo.utils.MapUtil
@@ -23,7 +24,7 @@ class MapViewModel: ViewModel() {
         println("🚗origin: $origin, destination: $destination, apiKey: $apiKey")
         viewModelScope.launch {
             try {
-                val response = MapUtil.mapService.getDirections(
+                val response = MapUtil.directionService.getDirections(
                     origin = origin,
                     destination = destination,
                     apiKey = apiKey
@@ -37,6 +38,23 @@ class MapViewModel: ViewModel() {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun reverseGeocode(latLng: LatLng, apiKey: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            try {
+                Log.i("GoogleMapScreen", "reverseGeocode, latLng: $latLng")
+                val response = MapUtil.geocodingService.reverseGeocode(
+                    latlng = "${latLng.latitude},${latLng.longitude}",
+                    apiKey = apiKey
+                )
+                val address = response.results.firstOrNull()?.formattedAddress
+                onResult(address)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                onResult(null)
             }
         }
     }
