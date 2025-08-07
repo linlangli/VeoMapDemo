@@ -1,7 +1,16 @@
 package com.github.linlangli.veomapdemo.utils
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Typeface
+import android.view.View
+import android.widget.TextView
 import com.github.linlangli.veomapdemo.service.IDirectionService
 import com.github.linlangli.veomapdemo.service.IGeocodingService
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -40,6 +49,32 @@ object MapUtil {
             poly.add(latLng)
         }
         return poly
+    }
+
+
+    fun createTextMarkerIcon(context: Context, text: String): BitmapDescriptor {
+        val textView = TextView(context).apply {
+            this.text = text
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.BLACK)
+            setPadding(16, 8, 16, 8)
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val spec = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        textView.measure(spec, spec)
+        textView.layout(0, 0, textView.measuredWidth, textView.measuredHeight)
+
+        val bitmap = Bitmap.createBitmap(
+            textView.measuredWidth,
+            textView.measuredHeight,
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        textView.draw(canvas)
+
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
     private val retrofit = Retrofit.Builder()

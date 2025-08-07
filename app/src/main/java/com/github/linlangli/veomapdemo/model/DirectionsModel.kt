@@ -8,6 +8,7 @@ data class DirectionsModel(
 
 data class Route(
     @SerializedName("overview_polyline") val overviewPolyline: OverviewPolyline,
+    val summary: String,
     val legs: List<Leg>
 )
 
