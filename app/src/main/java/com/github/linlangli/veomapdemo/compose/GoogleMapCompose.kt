@@ -1,4 +1,4 @@
-package com.github.linlangli.veomapdemo
+package com.github.linlangli.veomapdemo.compose
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.github.linlangli.veomapdemo.BuildConfig
 import com.github.linlangli.veomapdemo.utils.MapUtil.createTextMarkerIcon
 import com.github.linlangli.veomapdemo.viewModel.LocationInfo
 import com.github.linlangli.veomapdemo.viewModel.MapViewModel
