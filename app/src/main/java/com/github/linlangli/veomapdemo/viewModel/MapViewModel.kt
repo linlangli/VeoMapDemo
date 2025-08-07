@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.linlangli.veomapdemo.BuildConfig
+import com.github.linlangli.veomapdemo.model.Leg
 import com.github.linlangli.veomapdemo.utils.MapUtil
 import com.github.linlangli.veomapdemo.utils.MapUtil.decodePolyline
 import com.google.android.gms.location.LocationRequest
@@ -37,6 +38,9 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
 
     private val _currentLocation = MutableStateFlow<LocationInfo?>(null)
     val currentLocation = _currentLocation.asStateFlow()
+
+    private val _directionLeg = MutableStateFlow<Leg?>(null)
+    val directionLeg = _directionLeg.asStateFlow()
 
     private val _startLocation = MutableStateFlow<LocationInfo?>(null)
     val startLocation = _startLocation.asStateFlow()
@@ -101,7 +105,6 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             location?.let {
                 val latLng = LatLng(it.latitude, it.longitude)
-                Log.i("GoogleMapScreen", "🚗 initStartLocation: $latLng")
                 reverseGeocode(
                     latLng,
                     BuildConfig.MAPS_API_KEY
@@ -122,7 +125,6 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
      * @param apiKey Google Maps API Key
      */
     fun fetchDirections(origin: String, destination: String, apiKey: String) {
-        Log.i("GoogleMapScreen", "🚗 fetchDirections")
         viewModelScope.launch {
             try {
                 val response = MapUtil.directionService.getDirections(
@@ -130,17 +132,19 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
                     destination = destination,
                     apiKey = apiKey
                 )
-
+                _directionLeg.value = response.routes[0].legs[0]
                 if (response.routes.isNotEmpty()) {
                     val polyline = response.routes[0].overviewPolyline.points
-                    _startLocation.value = LocationInfo(
-                        LatLng(response.routes[0].legs[0].start_location.lat, response.routes[0].legs[0].start_location.lng),
-                        response.routes[0].legs[0].start_address
-                    )
-                    _endLocation.value = LocationInfo(
-                        LatLng(response.routes[0].legs[0].end_location.lat, response.routes[0].legs[0].end_location.lng),
-                        response.routes[0].legs[0].end_address
-                    )
+//                    if (_directionLeg.value != null) {
+//                        _startLocation.value = LocationInfo(
+//                            LatLng(_directionLeg.value!!.start_location.lat, _directionLeg.value!!.start_location.lng),
+//                            response.routes[0].legs[0].start_address
+//                        )
+//                        _endLocation.value = LocationInfo(
+//                            LatLng(_directionLeg.value!!.end_location.lat, _directionLeg.value!!.end_location.lng),
+//                            _directionLeg.value!!.end_address
+//                        )
+//                    }
                     _routePoints.value = decodePolyline(polyline)
                 }
             } catch (e: Exception) {
@@ -190,6 +194,7 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
         stopLocationUpdates()
         _navigationState.value = NavigationState.IDLE
         _endLocation.value = null
+        _directionLeg.value = null
         clearRoute()
     }
 
