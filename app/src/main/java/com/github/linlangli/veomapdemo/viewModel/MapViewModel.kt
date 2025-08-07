@@ -36,6 +36,9 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     private val _routePoints = MutableStateFlow<List<LatLng>>(emptyList())
     val routePoints = _routePoints.asStateFlow()
 
+    private val _travelDuration = MutableStateFlow<String?>(null)
+    val travelDuration = _travelDuration.asStateFlow()
+
     private val _currentLocation = MutableStateFlow<LocationInfo?>(null)
     val currentLocation = _currentLocation.asStateFlow()
 
@@ -58,6 +61,9 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     ).apply {
         setMinUpdateIntervalMillis(2000L) // 最快每2秒更新一次
     }.build()
+
+    private var startTimeMillis: Long = 0
+    private var endTimeMillis: Long = 0
 
 
     private val locationCallback = object : LocationCallback() {
@@ -186,11 +192,17 @@ class MapViewModel(app: Application): AndroidViewModel(app) {
     }
 
     fun startNavigation() {
+        startTimeMillis = System.currentTimeMillis()
         _navigationState.value = NavigationState.STARTED
         startLocationUpdates()
     }
 
     fun stopNavigation() {
+        endTimeMillis = System.currentTimeMillis()
+        val durationMillis = endTimeMillis - startTimeMillis
+        val seconds = (durationMillis / 1000) % 60
+        val minutes = (durationMillis / 1000) / 60
+        _travelDuration.value = "${minutes}分${seconds}秒"
         stopLocationUpdates()
         _navigationState.value = NavigationState.IDLE
         _endLocation.value = null

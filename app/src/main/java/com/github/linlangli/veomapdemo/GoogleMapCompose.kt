@@ -41,6 +41,7 @@ fun GoogleMapScreen() {
     val endLocation by viewModel.endLocation.collectAsState()
     val navigationState by viewModel.navigationState.collectAsState()
     val directionLeg by viewModel.directionLeg.collectAsState()
+    val travelDuration by viewModel.travelDuration.collectAsState()
 
     var hasLocationPermission by remember { mutableStateOf(false) }
     var startMarkerInfo by remember { mutableStateOf<BitmapDescriptor?>(null) }
@@ -181,7 +182,7 @@ fun GoogleMapScreen() {
                     .zIndex(1f)
             ) {
                 Text(text = "目的地已抵达", color = Color.Black, fontWeight = FontWeight.Bold)
-                Text(text = "导航距离: ${directionLeg!!.distance.text}\n预估耗时: ${directionLeg!!.duration.text}\n实际用时: ", color = Color.Black)
+                Text(text = "导航距离: ${directionLeg!!.distance.text}\n预估耗时: ${directionLeg!!.duration.text}\n实际用时: $travelDuration", color = Color.Black)
             }
         }
         var buttonText = "开始导航"
