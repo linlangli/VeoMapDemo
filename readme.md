@@ -16,15 +16,30 @@
 
 **7. 抵达目的地结束导航统计数据**
 
-# API
+# API接入
 
-获取路径
+依赖Google Maps API，使用**Retrofit**作为网络请求框架，使用**Gson**作为JSON解析框架。
+
+包括：
+
+```gradle
+implementation("com.google.android.gms:play-services-maps:19.0.0")
+implementation("com.google.android.gms:play-services-location:21.0.1")
+implementation("com.google.maps.android:maps-compose:2.11.4") // Compose 支持
+```
+接入API Key：
+
+在Google Cloud Platform控制台创建项目并启用Maps SDK for Android和Directions API，获取API Key。将API Key存储在**secrets.properties**文件中，并在**build.gradle**中进行注入。
+
+```gradle
+
+1. 获取路径
 
 ```
 maps/api/directions/json
 ```
 
-解析地名
+2. 解析地名
 
 ```
 maps/api/geocode/json
