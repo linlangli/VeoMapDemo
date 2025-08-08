@@ -31,19 +31,13 @@ implementation("com.google.maps.android:maps-compose:2.11.4") // Compose 支持
 
 在Google Cloud Platform控制台创建项目并启用Maps SDK for Android和Directions API，获取API Key。将API Key存储在**secrets.properties**文件中，并在**build.gradle**中进行注入。
 
-```gradle
+获取路径：
 
-1. 获取路径
-
-```
 maps/api/directions/json
-```
 
-2. 解析地名
+解析地名：
 
-```
 maps/api/geocode/json
-```
 
 # 架构
 
@@ -57,31 +51,31 @@ maps/api/geocode/json
 
 ```kotlin
 // 解析后的路径信息
-private val _routePoints = MutableStateFlow<List<LatLng>>(emptyList())  
-val routePoints = _routePoints.asStateFlow()  
+private val _routePoints = MutableStateFlow<List<LatLng>>(emptyList())
+val routePoints = _routePoints.asStateFlow()
 
 // 实际时长
-private val _travelDuration = MutableStateFlow<String?>(null)  
-val travelDuration = _travelDuration.asStateFlow()  
+private val _travelDuration = MutableStateFlow<String?>(null)
+val travelDuration = _travelDuration.asStateFlow()
 
 // 实时位置
-private val _currentLocation = MutableStateFlow<LocationInfo?>(null)  
-val currentLocation = _currentLocation.asStateFlow()  
+private val _currentLocation = MutableStateFlow<LocationInfo?>(null)
+val currentLocation = _currentLocation.asStateFlow()
 
 // 导航信息
-private val _directionLeg = MutableStateFlow<Leg?>(null)  
-val directionLeg = _directionLeg.asStateFlow()  
+private val _directionLeg = MutableStateFlow<Leg?>(null)
+val directionLeg = _directionLeg.asStateFlow()
 
 // 起始点
-private val _startLocation = MutableStateFlow<LocationInfo?>(null)  
-val startLocation = _startLocation.asStateFlow()  
+private val _startLocation = MutableStateFlow<LocationInfo?>(null)
+val startLocation = _startLocation.asStateFlow()
 
 // 终点
-private val _endLocation = MutableStateFlow<LocationInfo?>(null)  
+private val _endLocation = MutableStateFlow<LocationInfo?>(null)
 val endLocation = _endLocation.asStateFlow()
 
 // 导航状态，包括（空闲，开始，抵达）
-private val _navigationState = MutableStateFlow(NavigationState.IDLE)  
+private val _navigationState = MutableStateFlow(NavigationState.IDLE)
 val navigationState = _navigationState.asStateFlow()
 ```
 
